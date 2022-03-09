@@ -1,0 +1,576 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
+get_ipython().system('pip install mediapipe opencv-python pandas scikit-learn')
+
+
+# In[2]:
+
+
+import mediapipe as mp # Import mediapipe
+import cv2 # Import opencv
+
+
+# In[3]:
+
+
+mp_drawing = mp.solutions.drawing_utils # Drawing helpers
+mp_holistic = mp.solutions.holistic # Mediapipe Solutions
+
+
+# In[4]:
+
+
+cap = cv2.VideoCapture(0)
+# Initiate holistic model
+with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        
+        # Recolor Feed
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False        
+        
+        # Make Detections
+        results = holistic.process(image)
+        # print(results.face_landmarks)
+        
+        # face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
+        
+        # Recolor image back to BGR for rendering
+        image.flags.writeable = True   
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        
+
+        
+        # 2. Right hand
+        mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2)
+                                 )
+
+        # 3. Left Hand
+        mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(121,22,76), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(121,44,250), thickness=2, circle_radius=2)
+                                 )
+
+
+        cv2.imshow('Raw Webcam Feed', image)
+
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+# In[5]:
+
+
+results.pose_landmarks.landmark[0]
+
+
+# In[6]:
+
+
+import csv
+import os
+import numpy as np
+
+
+# In[7]:
+
+
+num_coords = len(results.pose_landmarks.landmark)+len(results.face_landmarks.landmark)
+num_coords
+
+
+# In[8]:
+
+
+landmarks = ['class']
+for val in range(1, num_coords+1):
+    landmarks += ['x{}'.format(val), 'y{}'.format(val), 'z{}'.format(val), 'v{}'.format(val)]
+
+
+# In[9]:
+
+
+landmarks
+
+
+# In[10]:
+
+
+import csv
+import os
+import numpy as np
+from csv import writer
+with open('Prac0460.csv', mode='w', newline='') as f:
+    csv_writer = csv.writer(f)
+    csv_writer.writerow(landmarks)
+    #f.writelines(row)
+
+
+# In[15]:
+
+
+class_name = "Please"
+
+
+# In[16]:
+
+
+import cv2 # Import opencv
+import mediapipe as mp
+mp_drawing = mp.solutions.drawing_utils # Drawing helpers
+mp_holistic = mp.solutions.holistic # Mediapipe Solutions
+cap = cv2.VideoCapture(0)
+# Initiate holistic model
+with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        
+        # Recolor Feed
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False        
+        
+        # Make Detections
+        results = holistic.process(image)
+        #print(results.face_landmarks)
+        
+        # face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
+        
+        # Recolor image back to BGR for rendering
+        image.flags.writeable = True   
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        
+
+        
+        # 2. Right hand
+        mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2)
+                                 )
+
+        # 3. Left Hand
+        mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(121,22,76), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(121,44,250), thickness=2, circle_radius=2)
+                                 )
+
+        # Export coordinates
+        try:
+            row = []
+            
+            if results.right_hand_landmarks is not None:
+                pose = results.right_hand_landmarks.landmark
+                pose_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
+                row+= pose_row
+                
+            if results.left_hand_landmarks is not None:
+                face = results.left_hand_landmarks.landmark
+                face_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
+                row+= face_row
+            
+            # Extract Pose landmarks
+            #pose = results.right_hand_landmarks.landmark
+            #pose_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
+            
+            # Extract Face landmarks
+            #face = results.left_hand_landmarks.landmark
+            #face_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
+            
+            #print(results._landmarks)
+            #print(results.right_hand_landmarks)
+            
+            
+            # Concate rows
+            
+            
+            # Append class name 
+            row.insert(0, class_name)
+            
+            # Export to CSV
+            with open('Prac0460.csv', mode='a', newline='') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow(row) 
+                #f.writelines(row)
+            
+        except Exception as e:
+            print(e)
+            
+            #pass
+                        
+        cv2.imshow('Raw Webcam Feed', image)
+
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+# In[11]:
+
+
+import pandas as pd
+filepath = r"C:\Users\Varun Bhat\Desktop\Pracfin1.csv"
+
+
+# In[18]:
+
+
+import pandas as pd
+df = pd.read_csv("Prac0460.csv")
+
+
+# In[19]:
+
+
+df.head()
+
+
+# In[20]:
+
+
+df.tail()
+
+
+# In[21]:
+
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+
+# In[22]:
+
+
+len(df)
+
+
+# In[23]:
+
+
+df.isna()
+
+
+# In[24]:
+
+
+len(df.iloc[149])
+
+
+# In[25]:
+
+
+df_dummy=df.dropna(thresh=2)
+
+
+# In[26]:
+
+
+df_dummy.to_csv("PracA0460.csv",index=False)
+
+
+# In[27]:
+
+
+df2=df_dummy.fillna(0)
+
+
+# In[111]:
+
+
+#For reading a df directly
+#df2.to_csv("Numbers1.csv", index=False)
+#filepath = r"C:\Users\Varun Bhat\Desktop\Numbers1.csv"
+
+
+# In[28]:
+
+
+df2.to_csv("NumbersAZ0460.csv", index=False)
+
+
+# In[29]:
+
+
+import pandas as pd
+df2 = pd.read_csv("NumbersAZ0460.csv")
+
+
+# In[30]:
+
+
+len(df2)
+
+
+# In[31]:
+
+
+df2.head()
+
+
+# In[32]:
+
+
+df2.tail()
+
+
+# In[33]:
+
+
+df2[df2['class']=='Me']
+
+
+# In[34]:
+
+
+X = df2.drop('class', axis=1) # features
+y = df2['class']
+
+
+# In[35]:
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1234)
+
+
+# In[36]:
+
+
+y_test
+
+
+# In[37]:
+
+
+from sklearn.pipeline import make_pipeline 
+from sklearn.preprocessing import StandardScaler 
+
+from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+
+
+# In[38]:
+
+
+pipelines = {
+    'lr':make_pipeline(StandardScaler(), LogisticRegression()),
+    'rc':make_pipeline(StandardScaler(), RidgeClassifier()),
+    'rf':make_pipeline(StandardScaler(), RandomForestClassifier()),
+    'gb':make_pipeline(StandardScaler(), GradientBoostingClassifier()),
+}
+
+
+# In[39]:
+
+
+fit_models = {}
+for algo, pipeline in pipelines.items():
+    model = pipeline.fit(X_train, y_train)
+    fit_models[algo] = model
+
+
+# In[40]:
+
+
+fit_models
+
+
+# In[41]:
+
+
+fit_models['rc'].predict(X_test)
+
+
+# In[42]:
+
+
+from sklearn.metrics import accuracy_score # Accuracy metrics 
+import pickle
+
+
+# In[43]:
+
+
+for algo, model in fit_models.items():
+    yhat = model.predict(X_test)
+    print(algo, accuracy_score(y_test, yhat))
+
+
+# In[44]:
+
+
+fit_models['lr'].predict(X_test)
+
+
+# In[45]:
+
+
+y_test
+
+
+# In[46]:
+
+
+with open('body_language.pkl', 'wb') as f:
+    pickle.dump(fit_models['rf'], f)
+
+
+# In[47]:
+
+
+with open('body_language.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+
+# In[48]:
+
+
+model
+
+
+# In[53]:
+
+
+#Final Code:
+cap = cv2.VideoCapture(0)
+# Initiate holistic model
+with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        
+        # Recolor Feed
+        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        image.flags.writeable = False        
+        
+        # Make Detections
+        results = holistic.process(image)
+        # print(results.face_landmarks)
+        
+        # face_landmarks, pose_landmarks, left_hand_landmarks, right_hand_landmarks
+        
+        # Recolor image back to BGR for rendering
+        image.flags.writeable = True   
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        
+        
+        # 2. Right hand
+        mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(80,22,10), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(80,44,121), thickness=2, circle_radius=2)
+                                 )
+
+        # 3. Left Hand
+        mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS, 
+                                 mp_drawing.DrawingSpec(color=(121,22,76), thickness=2, circle_radius=4),
+                                 mp_drawing.DrawingSpec(color=(121,44,250), thickness=2, circle_radius=2)
+                                 )
+
+        # 4. Pose Detections
+        #mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS, 
+         #                        mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=4),
+          #                       mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+           #                      )
+        # Export coordinates
+        try:
+            row = []
+            
+            if results.right_hand_landmarks is not None:
+                pose = results.right_hand_landmarks.landmark
+                pose_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in pose]).flatten())
+                row+= pose_row
+                
+            if results.left_hand_landmarks is not None:
+                face = results.left_hand_landmarks.landmark
+                face_row = list(np.array([[landmark.x, landmark.y, landmark.z, landmark.visibility] for landmark in face]).flatten())
+                row+= face_row
+                
+            #print(len(row))
+            #print(row)
+            row+= [0]*(2004-len(row))
+            
+           
+            
+#             # Append class name 
+#             row.insert(0, class_name)
+            
+#             # Export to CSV
+#             with open('coords.csv', mode='a', newline='') as f:
+#                 csv_writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#                 csv_writer.writerow(row) 
+
+            # Make Detections
+            X = pd.DataFrame([row])
+            body_language_class = model.predict(X)[0]
+            body_language_prob = model.predict_proba(X)[0]
+            print(body_language_class, body_language_prob)
+            print(X.isna())
+            print ("###########################")
+            print(X)
+            
+            
+            # Grab ear coords
+            coords = tuple(np.multiply(
+                            np.array(
+                                (results.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].x, 
+                                 results.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].y))
+                        , [640,480]).astype(int))
+            
+            cv2.rectangle(image, 
+                          (coords[0], coords[1]+5), 
+                          (coords[0]+len(body_language_class)*20, coords[1]-30), 
+                          (245, 117, 16), -1)
+            cv2.putText(image, body_language_class, coords, 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # Get status box
+            cv2.rectangle(image, (0,0), (250, 60), (245, 117, 16), -1)
+            
+            # Display Class
+            cv2.putText(image, 'CLASS'
+                        , (95,12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, body_language_class.split(' ')[0]
+                        , (90,40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            # Display Probability
+            cv2.putText(image, 'PROB'
+                        , (15,12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, str(round(body_language_prob[np.argmax(body_language_prob)],2))
+                        , (10,40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            
+        except Exception as e:
+            print(e)
+                        
+        cv2.imshow('Raw Webcam Feed', image)
+
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+# In[235]:
+
+
+tuple(np.multiply(np.array((results.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].x, 
+results.pose_landmarks.landmark[mp_holistic.PoseLandmark.LEFT_EAR].y)), [640,480]).astype(int))
+
+
+# In[ ]:
+
+
+
+
